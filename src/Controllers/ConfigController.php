@@ -26,11 +26,9 @@ class ConfigController extends Controller
 {
     public function render(): View
     {
-        $basicForm = Option::form('basic', '去中心联合认证 · 基础设置', function (OptionForm $form) {
+        $basicForm = Option::form('basic', '基础设置', function (OptionForm $form) {
             $form->text(UnionKeyService::OPT_SITE_NAME, '站点展示名')
-                ->description('显示在受信站目录与断言审计中;siteCode 由 init 命令设定后不可变更。');
-            $form->text(UnionKeyService::OPT_PEER_AUTHLIB_KEYS, 'L1 合作站材质公钥(可选)')
-                ->hint('分号分隔,每项为 Base64 X.509 DER(无 PEM 头尾);用于 /minecraftservices/publickeys 信任集。');
+                ->description('显示在受信站目录与断言审计中;初始化后不可变更。');
         })->handle();
 
         $publicKey = UnionKeyService::publicKeyPem();

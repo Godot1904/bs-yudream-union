@@ -71,7 +71,7 @@
     </div>
     <div class="yu-stat" style="background:linear-gradient(135deg,#28a745,#1e7e34)">
       <div class="yu-stat-value">{{ peers|length }}</div>
-      <div class="yu-stat-label">已互信站点</div><i class="fa-solid fa-link yu-stat-icon"></i>
+      <div class="yu-stat-label">已信任站点</div><i class="fa-solid fa-link yu-stat-icon"></i>
     </div>
     <div class="yu-stat" style="background:linear-gradient(135deg,#dc3545,#b02a37)">
       <div class="yu-stat-value">{{ localBans|length }}</div>
@@ -136,7 +136,7 @@
   </div>{# /互信卡 #}
 
   <div class="card card-outline card-primary yu-card">
-    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-server mr-1"></i>已互信站点</h3></div>
+    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-server mr-1"></i>已信任站点</h3></div>
     <div class="card-body table-responsive p-0 yu-scroll">
       <table class="table table-hover table-sm yu-table mb-0">
         <thead><tr><th>站点</th><th>名称</th><th>密钥指纹</th><th>前缀</th><th>加入时间</th><th></th></tr></thead>
@@ -160,8 +160,8 @@
 
   <div class="card card-outline card-danger yu-card">
     <div class="card-header d-flex align-items-center">
-      <h3 class="card-title"><i class="fa-solid fa-gavel mr-1"></i>封禁名单(全联盟生效)</h3>
-      <button class="btn btn-default btn-sm ml-auto" id="union-bans-pull-btn" onclick="unionBansPull(this)"><i class="fa-solid fa-sync mr-1"></i>拉取联盟封禁</button>
+      <h3 class="card-title"><i class="fa-solid fa-gavel mr-1"></i>封禁名单(全域生效)</h3>
+      <button class="btn btn-default btn-sm ml-auto" id="union-bans-pull-btn" onclick="unionBansPull(this)"><i class="fa-solid fa-sync mr-1"></i>拉取封禁列表</button>
     </div>
     <div class="card-body table-responsive p-0 yu-scroll">
       <table class="table table-hover table-sm yu-table mb-0">
@@ -197,10 +197,7 @@
 
   <div class="yu-col">
 
-  <div class="card card-outline card-secondary yu-card">
-    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-gear mr-1"></i>基础设置</h3></div>
-    <div class="card-body">{{ forms.basic|raw }}</div>
-  </div>
+  {{ forms.basic|raw }}
 
   <div class="card card-outline card-warning yu-card">
     <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-rotate mr-1"></i>本站密钥</h3></div>
