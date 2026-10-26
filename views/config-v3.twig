@@ -30,6 +30,20 @@
     .yu-grid { display: flex; gap: .75rem; align-items: flex-start; }
     .yu-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: .75rem; }
     @media (max-width: 991px) { .yu-grid { flex-direction: column; } }
+    /* 手机端适配(≤576px) */
+    @media (max-width: 576px) {
+      .yu-stats { grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+      .yu-stat { min-height: 64px; padding: .5rem .6rem; }
+      .yu-stat .yu-stat-value { font-size: .95rem; }
+      .yu-stat .yu-stat-label { font-size: .74rem; }
+      .yu-grid, .yu-col { gap: .6rem; }
+      .yu-card .input-group { flex-wrap: wrap; }
+      .yu-card .input-group > .form-control { flex: 1 1 100%; min-width: 0; }
+      .yu-card .input-group > .input-group-append { margin-left: 0; width: 100%; }
+      .yu-card .input-group > .input-group-append > .btn { width: 100%; }
+      .yu-card .form-inline { flex-wrap: wrap; }
+      .yu-card .form-inline > .form-control { width: 100% !important; margin-right: 0; margin-bottom: .35rem; }
+    }
   </style>
 
   {% if not initialized %}
