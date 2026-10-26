@@ -13,82 +13,82 @@
     .yu-table th, .yu-table td { padding: .35rem .5rem; font-size: .85rem; vertical-align: middle; white-space: nowrap; }
     .yu-table td:nth-child(3), .yu-table td.yu-wrap { white-space: normal; }
     .yu-token { letter-spacing: .3px; word-break: break-all; }
-    .yu-scroll { max-height: 240px; overflow-y: auto; }
+    .yu-scroll { max-height: 260px; overflow-y: auto; }
     /* 按钮按下反馈 */
-    .yu-card .btn:active, .yu-stats + .yu-grid .btn:active { transform: translateY(1px); filter: brightness(.82); }
-    .yu-card .btn[disabled], .yu-grid .btn[disabled] { opacity: .55; cursor: not-allowed; }
-    /* 概览小卡:统一尺寸,等高 */
+    .yu-grid .btn:active { transform: translateY(1px); filter: brightness(.82); }
+    .yu-grid .btn[disabled] { opacity: .55; cursor: not-allowed; }
+    /* 概览小卡:统一尺寸,等高;窄屏强制 2×2 */
     .yu-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; margin-bottom: .75rem; }
+    @media (max-width: 576px) { .yu-stats { grid-template-columns: repeat(2, 1fr); } }
     .yu-stat { position: relative; min-height: 74px; display: flex; flex-direction: column; justify-content: center;
       border-radius: .35rem; padding: .6rem .75rem; color: #fff; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
     .yu-stat .yu-stat-value { font-size: 1.15rem; font-weight: 600; word-break: break-all; line-height: 1.25; }
     .yu-stat .yu-stat-label { font-size: .78rem; opacity: .85; margin-top: .15rem; }
     .yu-stat .yu-stat-icon { position: absolute; right: .55rem; top: 50%; transform: translateY(-50%);
       font-size: 2rem; opacity: .18; }
-    /* 功能卡:固定两列,紧密瀑布排布 */
-    .yu-grid { display: flex !important; gap: .75rem; align-items: flex-start; }
-    .yu-grid > .yu-col { flex: 1 1 0 !important; min-width: 0 !important; display: flex !important;
-      flex-direction: column !important; gap: .75rem; }
-    @media (max-width: 991px) { .yu-grid { flex-direction: column !important; } }
+    /* 功能卡:宽屏两列,窄屏单列 */
+    .yu-grid { display: flex; gap: .75rem; align-items: flex-start; }
+    .yu-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: .75rem; }
+    @media (max-width: 991px) { .yu-grid { flex-direction: column; } }
   </style>
 
   {% if not initialized %}
     <div class="row justify-content-center mt-3">
       <div class="col-md-7">
         <div class="card card-warning yu-card">
-          <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-rocket mr-1"></i>初始化去中心联合认证</h3></div>
+          <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-rocket mr-1"></i>初始化</h3></div>
           <div class="card-body">
             <div class="callout callout-warning small mb-3">
-              <strong>siteCode 是跨站断言的受众标识,启用后不可变更</strong>,全联盟可见且无法回收,请按站点固定简称填写(如 <code>sitmc</code>)。
+              <strong>站点代码是本站在联盟里的身份证,启用后不能改</strong>,请用站点固定简称(如 <code>sitmc</code>)。
             </div>
             <div class="form-group">
-              <label class="yu-kv mb-1">siteCode(2-32 位小写字母/数字/-/_)</label>
+              <label class="yu-kv mb-1">站点代码(2-32 位小写字母/数字/-/_)</label>
               <input id="union-init-code" class="form-control form-control-sm yu-mono" placeholder="sitmc" />
             </div>
             <div class="form-group">
-              <label class="yu-kv mb-1">站点展示名(留空使用站点设置)</label>
+              <label class="yu-kv mb-1">站点显示名(留空用站点设置)</label>
               <input id="union-init-name" class="form-control form-control-sm" placeholder="SIT MC" />
             </div>
             <button class="btn btn-primary btn-sm" id="union-init-btn" onclick="unionInit(this)">
-              <i class="fa-solid fa-key mr-1"></i>生成联合密钥(RSA-4096)并初始化
+              <i class="fa-solid fa-key mr-1"></i>生成密钥并初始化
             </button>
-            <span class="yu-hint ml-2">生成约需数秒,请勿重复点击</span>
+            <span class="yu-hint ml-2">约需几秒,请勿重复点击</span>
           </div>
         </div>
       </div>
     </div>
   {% else %}
 
-  {# ── 状态概览(等高小卡) ── #}
+  {# ── 状态概览 ── #}
   <div class="yu-stats">
     <div class="yu-stat" style="background:linear-gradient(135deg,#17a2b8,#117a8b)">
       <div class="yu-stat-value yu-mono">{{ siteCode }}</div>
-      <div class="yu-stat-label">siteCode</div><i class="fa-solid fa-fingerprint yu-stat-icon"></i>
+      <div class="yu-stat-label">本站代码</div><i class="fa-solid fa-fingerprint yu-stat-icon"></i>
     </div>
     <div class="yu-stat" style="background:linear-gradient(135deg,#6c757d,#545b62)">
       <div class="yu-stat-value yu-mono">{{ issuerKeyId }}</div>
-      <div class="yu-stat-label">issuerKeyId</div><i class="fa-solid fa-key yu-stat-icon"></i>
+      <div class="yu-stat-label">本站密钥编号</div><i class="fa-solid fa-key yu-stat-icon"></i>
     </div>
     <div class="yu-stat" style="background:linear-gradient(135deg,#28a745,#1e7e34)">
       <div class="yu-stat-value">{{ peers|length }}</div>
-      <div class="yu-stat-label">受信站</div><i class="fa-solid fa-link yu-stat-icon"></i>
+      <div class="yu-stat-label">已互信站点</div><i class="fa-solid fa-link yu-stat-icon"></i>
     </div>
     <div class="yu-stat" style="background:linear-gradient(135deg,#dc3545,#b02a37)">
       <div class="yu-stat-value">{{ localBans|length }}</div>
-      <div class="yu-stat-label">本站封禁记录</div><i class="fa-solid fa-ban yu-stat-icon"></i>
+      <div class="yu-stat-label">封禁记录</div><i class="fa-solid fa-ban yu-stat-icon"></i>
     </div>
   </div>
 
-  {# ── 功能卡(固定两列瀑布) ── #}
+  {# ── 功能卡(宽屏两列,窄屏单列) ── #}
   <div class="yu-grid">
   <div class="yu-col">
-  <div class="card card-outline card-primary yu-card">
-    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-handshake mr-1"></i>站点互信(邀请码制)</h3></div>
-    <div class="card-body pt-2">
 
+  <div class="card card-outline card-primary yu-card">
+    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-handshake mr-1"></i>站点互信</h3></div>
+    <div class="card-body pt-2">
       <div class="d-flex align-items-center mb-2">
         <span class="badge badge-primary mr-2">1</span>
-        <span class="yu-kv">接纳某站:在下方生成邀请码,交给对方管理员</span>
+        <span class="yu-kv">接纳对方玩家:生成邀请码发给对方管理员</span>
       </div>
       <div class="input-group input-group-sm mb-2">
         <input id="union-issue-note" class="form-control" placeholder="备注(可留空,自动生成)" />
@@ -108,30 +108,24 @@
             <span class="input-group-text" id="union-issue-countdown">5:00</span>
           </div>
         </div>
-        <div class="yu-hint mt-1">仅显示这一次 · 5 分钟内有效 · 过期/使用后作废</div>
+        <div class="yu-hint mt-1">只显示这一次 · 5 分钟内有效</div>
       </div>
 
       <hr class="my-3" />
       <div class="d-flex align-items-center mb-2">
         <span class="badge badge-success mr-2">2</span>
-        <span class="yu-kv">加入某站:拿对方签发的邀请码,把本站注册到对端</span>
+        <span class="yu-kv">加入对方:拿对方给的邀请码,把本站注册过去</span>
       </div>
       <div class="input-group input-group-sm mb-1">
-        <input id="union-register-origin" class="form-control" style="max-width: 220px;" placeholder="https://对端 origin" />
-        <input id="union-register-token" class="form-control yu-mono" placeholder="对端邀请码" />
+        <input id="union-register-origin" class="form-control" style="max-width: 220px;" placeholder="https://对方站点地址" />
+        <input id="union-register-token" class="form-control yu-mono" placeholder="对方给的邀请码" />
         <div class="input-group-append">
           <button class="btn btn-success" onclick="unionEnrollRegister(this)"><i class="fa-solid fa-paper-plane mr-1"></i>注册</button>
         </div>
       </div>
-      <div class="yu-hint mb-2">双向互通 = 两站各自完成 ①②;高级:<a href="javascript:void(0)" onclick="document.getElementById('union-peer-add-row').hidden = false">直连添加(管理员工具)</a>
-        · <a href="javascript:void(0)" onclick="document.getElementById('union-issue-history').hidden = false">邀请码记录</a></div>
-      <div id="union-peer-add-row" hidden class="input-group input-group-sm mb-2">
-        <input id="union-peer-origin" class="form-control" placeholder="https://对端 origin(直连拉取发现文档并 TOFU 固定)" />
-        <div class="input-group-append"><button class="btn btn-default" onclick="unionPeerAdd(this, false)">直连添加</button></div>
-        <label class="small mb-0 ml-2 align-self-center"><input id="union-peer-force" type="checkbox" /> 公钥变化已核对</label>
-      </div>
+      <div class="yu-hint mb-2">两边互通 = 两站各做一遍 ①②;<a href="javascript:void(0)" onclick="document.getElementById('union-issue-history').hidden = false">历史邀请码</a></div>
       {% if enrollTokens %}
-        <div id="union-issue-history" hidden class="small text-muted">
+        <div id="union-issue-history" hidden class="small text-muted mb-2">
           {% for t in enrollTokens %}
             <span class="badge badge-{{ t.statusText == '待使用' ? 'success' : (t.statusText == '已过期' ? 'secondary' : 'info') }}">{{ t.statusText }}</span>
             {{ t.createdText }}{{ t.note ? ' · ' ~ t.note : '' }}{{ not loop.last ? ' / ' : '' }}
@@ -139,97 +133,51 @@
         </div>
       {% endif %}
     </div>
-  </div>{# /站点互信卡 #}
+  </div>{# /互信卡 #}
 
   <div class="card card-outline card-primary yu-card">
-    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-server mr-1"></i>受信站</h3></div>
+    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-server mr-1"></i>已互信站点</h3></div>
     <div class="card-body table-responsive p-0 yu-scroll">
       <table class="table table-hover table-sm yu-table mb-0">
-        <thead><tr><th>siteCode</th><th>名称</th><th>密钥指纹</th><th>备钥</th><th>前缀</th><th>TLS</th><th>加入</th><th></th></tr></thead>
+        <thead><tr><th>站点</th><th>名称</th><th>密钥指纹</th><th>前缀</th><th>加入时间</th><th></th></tr></thead>
         <tbody>
           {% for peer in peers %}
             <tr>
               <td><code>{{ peer.code }}</code></td>
-              <td>{{ peer.name }}<br /><span class="yu-hint">{{ peer.origin }}<br />材质钥:{{ (peer.authlib ? '✓ 已钉扎' : '<span class=text-warning>未钉,重新直连添加一次</span>') | raw }}</span></td>
+              <td>{{ peer.name }}<br /><span class="yu-hint">{{ peer.origin }}<br />皮肤签名钥:{{ (peer.authlib ? '✓ 已同步' : '<span class=text-warning>未同步,删除后重新添加</span>') | raw }}</span></td>
               <td><code class="small">{{ peer.keyId }}</code></td>
-              <td>{{ (peer.backup ? '<i class="fa-solid fa-check text-success"></i>' : '<span class="text-muted">—</span>') | raw }}</td>
               <td>{{ (peer.namePrefix ? '<code>' ~ peer.namePrefix ~ '</code>' : '<span class="text-muted">—</span>') | raw }}</td>
-              <td><span class="yu-hint yu-mono">{{ peer.tls }}</span></td>
               <td><span class="yu-hint">{{ peer.addedAt }}</span></td>
               <td><button class="btn btn-xs btn-outline-danger" onclick="unionPeerRemove(this, '{{ peer.code }}')"><i class="fa-solid fa-xmark"></i></button></td>
             </tr>
           {% else %}
-            <tr><td colspan="8" class="text-center text-muted py-4">尚未信任任何站点 · 联盟玩家将无法经联合认证进入本站服务器</td></tr>
+            <tr><td colspan="6" class="text-center text-muted py-4">还没有互信站点 · 对方玩家将无法进入本站服务器</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>{# /受信站卡 #}
-  </div>{# /yu-col 左 #}
 
-  <div class="yu-col">
-  {{ forms.basic|raw }}
-
-  <div class="card card-outline card-warning yu-card">
-    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-rotate mr-1"></i>联合密钥与轮换</h3></div>
-    <div class="card-body">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <span class="yu-kv">主钥 <code class="small">{{ issuerKeyId }}</code></span>
-        <span class="yu-kv">备钥 {% if backupKeyId %}<code class="small">{{ backupKeyId }}</code>{% else %}<span class="text-muted">无</span>{% endif %}</span>
-      </div>
-      <button class="btn btn-default btn-sm" onclick="unionKeyAction(this, 'key-backup', '生成新备钥?现有备钥将被覆盖。')"><i class="fa-solid fa-plus mr-1"></i>生成备钥</button>
-      {% if backupKeyId %}
-        <button class="btn btn-warning btn-sm" onclick="unionKeyAction(this, 'key-promote', '备钥晋升为主钥?旧主钥立即弃用,联盟站验签依赖备钥宽限过渡。')"><i class="fa-solid fa-arrow-up mr-1"></i>晋升备钥为主</button>
-      {% endif %}
-      <details class="mt-3">
-        <summary class="yu-kv" style="cursor:pointer">联合签名公钥(注册时供联盟站核对指纹)</summary>
-        <pre class="yu-mono small mt-2 mb-0" style="white-space: pre-wrap; word-break: break-all;">{{ publicKeyPem }}</pre>
-      </details>
-    </div>
-  </div>{# /密钥卡 #}
-
-  <div class="card card-outline card-secondary yu-card">
-    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-list-check mr-1"></i>审计(登录 90 天/治理 30 天)</h3></div>
-    <div class="card-body table-responsive p-0 yu-scroll">
-      <table class="table table-hover table-sm yu-table mb-0">
-        <thead><tr><th>类型</th><th>摘要</th><th>时间</th></tr></thead>
-        <tbody>
-          {% for a in audit %}
-            <tr>
-              <td><span class="badge badge-{{ {'join_accept':'success','join_issue':'success','join_reject':'danger','conflict':'warning','ban_add':'danger','ban_lift':'info','key_rotate':'warning','bans_pull':'secondary'}[a.type] ?? 'secondary' }}">{{ a.type }}</span></td>
-              <td class="small">{{ a.detail|json_encode() }}</td>
-              <td><span class="yu-hint">{{ a.at }}</span></td>
-            </tr>
-          {% else %}
-            <tr><td colspan="3" class="text-center text-muted py-4">暂无记录</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>{# /审计卡 #}
-  </div>{# /yu-col 右 #}
-
-  <div class="yu-col">
   <div class="card card-outline card-danger yu-card">
     <div class="card-header d-flex align-items-center">
-      <h3 class="card-title"><i class="fa-solid fa-gavel mr-1"></i>联合封禁账本(append-only)</h3>
-      <button class="btn btn-default btn-sm ml-auto" id="union-bans-pull-btn" onclick="unionBansPull(this)"><i class="fa-solid fa-sync mr-1"></i>同步受信站账本</button>
+      <h3 class="card-title"><i class="fa-solid fa-gavel mr-1"></i>封禁名单(全联盟生效)</h3>
+      <button class="btn btn-default btn-sm ml-auto" id="union-bans-pull-btn" onclick="unionBansPull(this)"><i class="fa-solid fa-sync mr-1"></i>拉取联盟封禁</button>
     </div>
     <div class="card-body table-responsive p-0 yu-scroll">
       <table class="table table-hover table-sm yu-table mb-0">
-        <thead><tr><th>seq</th><th>角色名</th><th>原因</th><th>状态</th><th>时间</th><th></th></tr></thead>
+        <thead><tr><th>序号</th><th>角色名</th><th>原因</th><th>状态</th><th>时间</th><th></th></tr></thead>
         <tbody>
           {% for ban in localBans %}
             <tr>
               <td class="text-muted">{{ ban.seq }}</td>
               <td><code>{{ ban.name }}</code></td>
               <td class="small">{{ ban.reason }}</td>
-              <td>{% if ban.status == 'active' %}<span class="badge badge-danger">active</span>{% else %}<span class="badge badge-secondary">lifted</span>{% endif %}</td>
+              <td>{% if ban.status == 'active' %}<span class="badge badge-danger">封禁中</span>{% else %}<span class="badge badge-secondary">已解除</span>{% endif %}</td>
               <td><span class="yu-hint">{{ ban.createdAtText }}</span></td>
               <td>{% if ban.status == 'active' %}<button class="btn btn-xs btn-outline-secondary" onclick="unionBanLift(this, '{{ ban.name }}')" title="解除"><i class="fa-solid fa-rotate-left"></i></button>{% endif %}</td>
             </tr>
           {% else %}
-            <tr><td colspan="6" class="text-center text-muted py-4">本站尚无封禁裁决</td></tr>
+            <tr><td colspan="6" class="text-center text-muted py-4">本站还没有封禁过玩家</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -241,11 +189,57 @@
         <button class="btn btn-sm btn-danger" onclick="unionBanAdd(this)"><i class="fa-solid fa-ban mr-1"></i>封禁</button>
       </div>
       {% for l in ledgers %}
-        <div class="yu-hint mt-1">{{ l.code }} · cursor={{ l.cursor }} · {{ l.entries }} 条 · {{ l.fetchedAt }}</div>
+        <div class="yu-hint mt-1">来自 {{ l.code }}:已同步 {{ l.entries }} 条({{ l.fetchedAt }})</div>
       {% endfor %}
     </div>
   </div>{# /封禁卡 #}
-  </div>{# /yu-col 左2 #}
+  </div>{# /左列 #}
+
+  <div class="yu-col">
+
+  <div class="card card-outline card-secondary yu-card">
+    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-gear mr-1"></i>基础设置</h3></div>
+    <div class="card-body">{{ forms.basic|raw }}</div>
+  </div>
+
+  <div class="card card-outline card-warning yu-card">
+    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-rotate mr-1"></i>本站密钥</h3></div>
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="yu-kv">当前密钥 <code class="small">{{ issuerKeyId }}</code></span>
+        <span class="yu-kv">备用 {% if backupKeyId %}<code class="small">{{ backupKeyId }}</code>{% else %}<span class="text-muted">无</span>{% endif %}</span>
+      </div>
+      <button class="btn btn-default btn-sm" onclick="unionKeyAction(this, 'key-backup', '生成新的备用密钥?')"><i class="fa-solid fa-plus mr-1"></i>生成备用密钥</button>
+      {% if backupKeyId %}
+        <button class="btn btn-warning btn-sm" onclick="unionKeyAction(this, 'key-promote', '把备用密钥转正?旧密钥立即作废,对方站点会自动过渡。')"><i class="fa-solid fa-arrow-up mr-1"></i>备用转正</button>
+      {% endif %}
+      <details class="mt-3">
+        <summary class="yu-kv" style="cursor:pointer">本站公钥(互信时供对方核对)</summary>
+        <pre class="yu-mono small mt-2 mb-0" style="white-space: pre-wrap; word-break: break-all;">{{ publicKeyPem }}</pre>
+      </details>
+    </div>
+  </div>{# /密钥卡 #}
+
+  <div class="card card-outline card-secondary yu-card">
+    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-list-check mr-1"></i>操作记录</h3></div>
+    <div class="card-body table-responsive p-0 yu-scroll">
+      <table class="table table-hover table-sm yu-table mb-0">
+        <thead><tr><th>操作</th><th>内容</th><th>时间</th></tr></thead>
+        <tbody>
+          {% for a in audit %}
+            <tr>
+              <td><span class="badge badge-{{ {'join_accept':'success','join_issue':'success','join_reject':'danger','conflict':'warning','ban_add':'danger','ban_lift':'info','key_rotate':'warning','bans_pull':'secondary','enroll_issue':'primary','peer_enrolled':'success','peer_self_enroll':'success','peer_remove':'danger'}[a.type] ?? 'secondary' }}">{{ {'join_accept':'联合登录','join_issue':'签发证明','join_reject':'拒绝登录','conflict':'撞名冲突','ban_add':'封禁','ban_lift':'解封','key_rotate':'密钥轮换','bans_pull':'同步封禁','enroll_issue':'生成邀请码','peer_enrolled':'新互信站','peer_self_enroll':'注册到对方','peer_remove':'移除互信'}[a.type] ?? a.type }}</span></td>
+              <td class="small">{{ a.detail|json_encode() }}</td>
+              <td><span class="yu-hint">{{ a.at }}</span></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="3" class="text-center text-muted py-4">暂无记录</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>{# /操作记录卡 #}
+  </div>{# /右列 #}
   </div>{# /.yu-grid #}
 
   {% endif %}
@@ -279,7 +273,7 @@
 
       window.unionInit = function (btn) {
         var code = document.getElementById('union-init-code').value.trim();
-        if (!code) { notify.toast.error('请输入 siteCode'); return; }
+        if (!code) { notify.toast.error('请输入站点代码'); return; }
         yuBusy(btn, async function () {
           var result = await globalThis.blessing.fetch.post(
             '/admin/plugins/config/yudream-union/init',
@@ -315,26 +309,20 @@
       window.unionEnrollRegister = function (btn) {
         var origin = document.getElementById('union-register-origin').value.trim();
         var token = document.getElementById('union-register-token').value.trim();
-        if (!origin || !token) { notify.toast.error('请输入对端 origin 与邀请码'); return; }
+        if (!origin || !token) { notify.toast.error('请输入对方站点地址与邀请码'); return; }
         yuBusy(btn, async function () {
           var result = await globalThis.blessing.fetch.post(
             '/admin/plugins/config/yudream-union/enroll-register',
             { origin: origin, token: token, note: '' }
           );
-          if (result.code === 0) {
-            notify.toast.success(result.message);
-            if (result.data && result.data.peerSecret) {
-              window.__yuPeerSecret = result.data.peerSecret;
-              notify.toast.info('peerSecret 已暂存,页面刷新前可从控制台 window.__yuPeerSecret 取回');
-            }
-            setTimeout(function () { location.reload(); }, 1200);
-          } else { notify.toast.error(result.message); }
+          if (result.code === 0) { notify.toast.success(result.message); setTimeout(function () { location.reload(); }, 1200); }
+          else { notify.toast.error(result.message); }
         });
       };
 
       window.unionPeerAdd = function (btn, force) {
         var origin = document.getElementById('union-peer-origin').value.trim();
-        if (!origin) { notify.toast.error('请输入对端 origin'); return; }
+        if (!origin) { notify.toast.error('请输入对方站点地址'); return; }
         var forceChecked = force || document.getElementById('union-peer-force').checked;
         yuBusy(btn, async function () {
           var result = await globalThis.blessing.fetch.post(
@@ -346,7 +334,7 @@
       };
 
       window.unionPeerRemove = function (btn, code) {
-        if (!confirm('移除受信站 ' + code + '?该站玩家的联合登录将立即失效。')) { return; }
+        if (!confirm('移除互信站点 ' + code + '?对方玩家将立即无法进入本站服务器。')) { return; }
         yuBusy(btn, async function () {
           var result = await globalThis.blessing.fetch.post('/admin/plugins/config/yudream-union/peer-remove', { code: code });
           if (result.code === 0) { notify.toast.success(result.message); setTimeout(function () { location.reload(); }, 600); }
@@ -367,7 +355,7 @@
       };
 
       window.unionBanLift = function (btn, name) {
-        if (!confirm('解除对 ' + name + ' 的封禁?(append-only 账本将追加 LIFTED 事件)')) { return; }
+        if (!confirm('解除对 ' + name + ' 的封禁?')) { return; }
         yuBusy(btn, async function () {
           var result = await globalThis.blessing.fetch.post('/admin/plugins/config/yudream-union/ban-lift', { name: name });
           if (result.code === 0) { notify.toast.success(result.message); setTimeout(function () { location.reload(); }, 600); }
