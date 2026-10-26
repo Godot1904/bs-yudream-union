@@ -1,0 +1,46 @@
+diff --git a/src/Controllers/ConfigController.php b/src/Controllers/ConfigController.php
+index 8035110..891e959 100644
+--- a/src/Controllers/ConfigController.php
++++ b/src/Controllers/ConfigController.php
+@@ -166,6 +166,7 @@ class ConfigController extends Controller
+         $result = [
+             'meta' => [
+                 'serverName' => option_localized('site_name'),
++                'feature.enable_public_key_fetching' => true, // YD 联合公钥②:端点由 yudream-union 适配插件提供
+                 'implementationName' => 'Yggdrasil Connect for Blessing Skin by LittleSkin',
+                 'implementationVersion' => plugin('yggdrasil-connect')->version,
+                 'links' => [
+diff --git a/src/Controllers/SessionController.php b/src/Controllers/SessionController.php
+index 9e1a9ba..cf9a899 100644
+--- a/src/Controllers/SessionController.php
++++ b/src/Controllers/SessionController.php
+@@ -90,6 +90,12 @@ class SessionController extends Controller
+         // 加入服务器
+         Cache::put("yggdrasil-server-$serverId", $session, 120);
+ 
++        // YD 联合认证①:带时间戳的联合证据(60s 窗,协议 §3.2),供 yudream-union 适配插件读取
++        Cache::put("yggdrasil-union-join-$serverId", [
++            'profile' => $selectedProfile,
++            'joinedAt' => (int) (microtime(true) * 1000),
++        ], 60);
++
+         Log::channel('ygg')->info("Player [$selectedProfile] successfully joined the server [$serverId]");
+ 
+         ygg_log([
+@@ -149,6 +155,16 @@ class SessionController extends Controller
+             }
+         }
+ 
++        // YD 联合认证③(A 侧必需):本地未命中交适配插件做受信站断言验签与本站重签;
++        // 插件未启用/未命中/降级时保持原 204 语义
++        if (class_exists(\SITMC\YudreamUnion\Services\FederationService::class)) {
++            $federated = \SITMC\YudreamUnion\Services\FederationService::handleMiss($name, $serverId);
++            if ($federated !== null) {
++                \Log::channel('ygg')->info('[yudream-union] federated hasJoined', ['body' => $federated]);
++                return response()->json($federated);
++            }
++        }
++
+         Log::channel('ygg')->info("Player [$name] was not in the server [$serverId]");
+ 
+         return response()->noContent();

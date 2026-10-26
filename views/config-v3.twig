@@ -1,0 +1,372 @@
+{% extends 'admin.base' %}
+
+{% block title %}去中心联合认证{% endblock %}
+
+{% block content %}
+  <style>
+    .yu-mono { font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace; }
+    .yu-kv { font-size: .86rem; }
+    .yu-hint { font-size: .8rem; color: #6c757d; }
+    .yu-card { min-width: 0; }
+    .yu-card .card-header { padding: .55rem .8rem; }
+    .yu-card .card-header .card-title { font-size: .95rem; margin-bottom: 0; }
+    .yu-table th, .yu-table td { padding: .35rem .5rem; font-size: .85rem; vertical-align: middle; white-space: nowrap; }
+    .yu-table td:nth-child(3), .yu-table td.yu-wrap { white-space: normal; }
+    .yu-token { letter-spacing: .3px; word-break: break-all; }
+    .yu-scroll { max-height: 240px; overflow-y: auto; }
+    /* 概览小卡:统一尺寸,等高 */
+    .yu-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; margin-bottom: .75rem; }
+    .yu-stat { position: relative; min-height: 74px; display: flex; flex-direction: column; justify-content: center;
+      border-radius: .35rem; padding: .6rem .75rem; color: #fff; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+    .yu-stat .yu-stat-value { font-size: 1.15rem; font-weight: 600; word-break: break-all; line-height: 1.25; }
+    .yu-stat .yu-stat-label { font-size: .78rem; opacity: .85; margin-top: .15rem; }
+    .yu-stat .yu-stat-icon { position: absolute; right: .55rem; top: 50%; transform: translateY(-50%);
+      font-size: 2rem; opacity: .18; }
+    /* 功能卡:固定两列,紧密瀑布排布(v3 布局,inline 兜底防样式缓存) */
+    .yu-grid { display: flex !important; gap: .75rem; align-items: flex-start; }
+    .yu-grid > .yu-col { flex: 1 1 0 !important; min-width: 0 !important; display: flex !important;
+      flex-direction: column !important; gap: .75rem; }
+    @media (max-width: 991px) { .yu-grid { flex-direction: column !important; } }
+  </style>
+
+  {% if not initialized %}
+    <div class="row justify-content-center mt-3">
+      <div class="col-md-7">
+        <div class="card card-warning yu-card">
+          <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-rocket mr-1"></i>初始化去中心联合认证</h3></div>
+          <div class="card-body">
+            <div class="callout callout-warning small mb-3">
+              <strong>siteCode 是跨站断言的受众标识,启用后不可变更</strong>,全联盟可见且无法回收,请按站点固定简称填写(如 <code>sitmc</code>)。
+            </div>
+            <div class="form-group">
+              <label class="yu-kv mb-1">siteCode(2-32 位小写字母/数字/-/_)</label>
+              <input id="union-init-code" class="form-control form-control-sm yu-mono" placeholder="sitmc" />
+            </div>
+            <div class="form-group">
+              <label class="yu-kv mb-1">站点展示名(留空使用站点设置)</label>
+              <input id="union-init-name" class="form-control form-control-sm" placeholder="SIT MC" />
+            </div>
+            <button class="btn btn-primary btn-sm" id="union-init-btn" onclick="unionInit()">
+              <i class="fa-solid fa-key mr-1"></i>生成联合密钥(RSA-4096)并初始化
+            </button>
+            <span class="yu-hint ml-2">生成约需数秒,请勿重复点击</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% else %}
+
+  {# ── 状态概览(等高小卡) ── #}
+  <div class="yu-stats">
+    <div class="yu-stat" style="background:linear-gradient(135deg,#17a2b8,#117a8b)">
+      <div class="yu-stat-value yu-mono">{{ siteCode }}</div>
+      <div class="yu-stat-label">siteCode</div><i class="fa-solid fa-fingerprint yu-stat-icon"></i>
+    </div>
+    <div class="yu-stat" style="background:linear-gradient(135deg,#6c757d,#545b62)">
+      <div class="yu-stat-value yu-mono">{{ issuerKeyId }}</div>
+      <div class="yu-stat-label">issuerKeyId</div><i class="fa-solid fa-key yu-stat-icon"></i>
+    </div>
+    <div class="yu-stat" style="background:linear-gradient(135deg,#28a745,#1e7e34)">
+      <div class="yu-stat-value">{{ peers|length }}</div>
+      <div class="yu-stat-label">受信站</div><i class="fa-solid fa-link yu-stat-icon"></i>
+    </div>
+    <div class="yu-stat" style="background:linear-gradient(135deg,#dc3545,#b02a37)">
+      <div class="yu-stat-value">{{ localBans|length }}</div>
+      <div class="yu-stat-label">本站封禁记录</div><i class="fa-solid fa-ban yu-stat-icon"></i>
+    </div>
+  </div>
+
+  {# ── 功能卡(固定两列瀑布) ── #}
+  <div class="yu-grid" style="display:flex;gap:.75rem;align-items:flex-start;">
+  <div class="yu-col" style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:.75rem;">
+  <div class="card card-outline card-primary yu-card">
+    <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-handshake mr-1"></i>站点互信(邀请码制)</h3></div>
+        <div class="card-body pt-2">
+
+          <div class="d-flex align-items-center mb-2">
+            <span class="badge badge-primary mr-2">1</span>
+            <span class="yu-kv">接纳某站:在下方生成邀请码,交给对方管理员</span>
+          </div>
+          <div class="input-group input-group-sm mb-2">
+            <input id="union-issue-note" class="form-control" placeholder="备注(可留空,自动生成)" />
+            <div class="input-group-append">
+              <button class="btn btn-primary" id="union-issue-btn" onclick="unionEnrollIssue()">
+                <i class="fa-solid fa-ticket mr-1"></i>生成邀请码
+              </button>
+            </div>
+          </div>
+          <div id="union-issue-result" hidden class="mb-3">
+            <div class="input-group input-group-sm">
+              <input id="union-issue-token" class="form-control yu-mono yu-token" readonly />
+              <div class="input-group-append">
+                <button class="btn btn-default" onclick="unionCopy('union-issue-token')"><i class="fa-regular fa-copy"></i></button>
+              </div>
+              <div class="input-group-append">
+                <span class="input-group-text" id="union-issue-countdown">5:00</span>
+              </div>
+            </div>
+            <div class="yu-hint mt-1">仅显示这一次 · 5 分钟内有效 · 过期/使用后作废</div>
+          </div>
+
+          <hr class="my-3" />
+          <div class="d-flex align-items-center mb-2">
+            <span class="badge badge-success mr-2">2</span>
+            <span class="yu-kv">加入某站:拿对方签发的邀请码,把本站注册到对端</span>
+          </div>
+          <div class="input-group input-group-sm mb-1">
+            <input id="union-register-origin" class="form-control" style="max-width: 220px;" placeholder="https://对端 origin" />
+            <input id="union-register-token" class="form-control yu-mono" placeholder="对端邀请码" />
+            <div class="input-group-append">
+              <button class="btn btn-success" onclick="unionEnrollRegister()"><i class="fa-solid fa-paper-plane mr-1"></i>注册</button>
+            </div>
+          </div>
+          <div class="yu-hint mb-2">双向互通 = 两站各自完成 ①②;高级:<a href="javascript:void(0)" onclick="document.getElementById('union-peer-add-row').hidden = false">直连添加(管理员工具)</a>
+            · <a href="javascript:void(0)" onclick="document.getElementById('union-issue-history').hidden = false">邀请码记录</a></div>
+          <div id="union-peer-add-row" hidden class="input-group input-group-sm mb-2">
+            <input id="union-peer-origin" class="form-control" placeholder="https://对端 origin(直连拉取发现文档并 TOFU 固定)" />
+            <div class="input-group-append"><button class="btn btn-default" onclick="unionPeerAdd(false)">直连添加</button></div>
+            <label class="small mb-0 ml-2 align-self-center"><input id="union-peer-force" type="checkbox" /> 公钥变化已核对</label>
+          </div>
+          {% if enrollTokens %}
+            <div id="union-issue-history" hidden class="small text-muted">
+              {% for t in enrollTokens %}
+                <span class="badge badge-{{ t.statusText == '待使用' ? 'success' : (t.statusText == '已过期' ? 'secondary' : 'info') }}">{{ t.statusText }}</span>
+                {{ t.createdText }}{{ t.note ? ' · ' ~ t.note : '' }}{{ not loop.last ? ' / ' : '' }}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>{# /站点互信卡 #}
+      <div class="card card-outline card-primary yu-card">
+        <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-server mr-1"></i>受信站</h3></div>
+        <div class="card-body table-responsive p-0 yu-scroll">
+          <table class="table table-hover table-sm yu-table mb-0">
+            <thead><tr><th>siteCode</th><th>名称</th><th>密钥指纹</th><th>备钥</th><th>前缀</th><th>TLS</th><th>加入</th><th></th></tr></thead>
+            <tbody>
+              {% for peer in peers %}
+                <tr>
+                  <td><code>{{ peer.code }}</code></td>
+                  <td>{{ peer.name }}<br /><span class="yu-hint">{{ peer.origin }}<br />材质钥:{{ peer.authlib ? '✓ 已钉扎' : '未钉(重添加一次)' }}<br />材质钥:{{ peer.authlib ? '✓ 已钉扎' : '<span class="text-warning">未钉(重添加一次)</span>' }}</span></td>
+                  <td><code class="small">{{ peer.keyId }}</code></td>
+                  <td>{{ (peer.backup ? '<i class="fa-solid fa-check text-success"></i>' : '<span class="text-muted">—</span>') | raw }}</td>
+                  <td>{{ (peer.namePrefix ? '<code>' ~ peer.namePrefix ~ '</code>' : '<span class="text-muted">—</span>') | raw }}</td>
+                  <td><span class="yu-hint yu-mono">{{ peer.tls }}</span></td>
+                  <td><span class="yu-hint">{{ peer.addedAt }}</span></td>
+                  <td><button class="btn btn-xs btn-outline-danger" onclick="unionPeerRemove('{{ peer.code }}')"><i class="fa-solid fa-xmark"></i></button></td>
+                </tr>
+              {% else %}
+                <tr><td colspan="8" class="text-center text-muted py-4">尚未信任任何站点 · 联盟玩家将无法经联合认证进入本站服务器</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>{# /受信站卡 #}
+
+      <div class="card card-outline card-secondary yu-card">
+        <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-gear mr-1"></i>基础设置</h3></div>
+        <div class="card-body">{{ forms.basic|raw }}</div>
+      </div>
+
+      <div class="card card-outline card-warning yu-card">
+        <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-rotate mr-1"></i>联合密钥与轮换</h3></div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="yu-kv">主钥 <code class="small">{{ issuerKeyId }}</code></span>
+            <span class="yu-kv">备钥 {% if backupKeyId %}<code class="small">{{ backupKeyId }}</code>{% else %}<span class="text-muted">无</span>{% endif %}</span>
+          </div>
+          <button class="btn btn-default btn-sm" onclick="unionKeyAction('key-backup', '生成新备钥?现有备钥将被覆盖。', '正在生成(RSA-4096,约数秒)…')"><i class="fa-solid fa-plus mr-1"></i>生成备钥</button>
+          {% if backupKeyId %}
+            <button class="btn btn-warning btn-sm" onclick="unionKeyAction('key-promote', '备钥晋升为主钥?旧主钥立即弃用,联盟站验签依赖备钥宽限过渡。', null)"><i class="fa-solid fa-arrow-up mr-1"></i>晋升备钥为主</button>
+          {% endif %}
+          <details class="mt-3">
+            <summary class="yu-kv" style="cursor:pointer">联合签名公钥(注册时供联盟站核对指纹)</summary>
+            <pre class="yu-mono small mt-2 mb-0" style="white-space: pre-wrap; word-break: break-all;">{{ publicKeyPem }}</pre>
+          </details>
+        </div>
+      </div>{# /密钥卡 #}
+    </div>{# /yu-col 左:互信·受信·设置·密钥 #}
+
+  <div class="yu-col" style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:.75rem;">
+      <div class="card card-outline card-danger yu-card">
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title"><i class="fa-solid fa-gavel mr-1"></i>联合封禁账本(append-only)</h3>
+          <button class="btn btn-default btn-sm ml-auto" id="union-bans-pull-btn" onclick="unionBansPull()"><i class="fa-solid fa-sync mr-1"></i>同步受信站账本</button>
+        </div>
+        <div class="card-body table-responsive p-0 yu-scroll">
+          <table class="table table-hover table-sm yu-table mb-0">
+            <thead><tr><th>seq</th><th>角色名</th><th>原因</th><th>状态</th><th>时间</th><th></th></tr></thead>
+            <tbody>
+              {% for ban in localBans %}
+                <tr>
+                  <td class="text-muted">{{ ban.seq }}</td>
+                  <td><code>{{ ban.name }}</code></td>
+                  <td class="small">{{ ban.reason }}</td>
+                  <td>{% if ban.status == 'active' %}<span class="badge badge-danger">active</span>{% else %}<span class="badge badge-secondary">lifted</span>{% endif %}</td>
+                  <td><span class="yu-hint">{{ ban.createdAtText }}</span></td>
+                  <td>{% if ban.status == 'active' %}<button class="btn btn-xs btn-outline-secondary" onclick="unionBanLift('{{ ban.name }}')" title="解除"><i class="fa-solid fa-rotate-left"></i></button>{% endif %}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="text-center text-muted py-4">本站尚无封禁裁决</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="card-footer">
+          <div class="form-inline">
+            <input id="union-ban-name" class="form-control form-control-sm mr-1" style="width: 120px;" placeholder="角色名" />
+            <input id="union-ban-reason" class="form-control form-control-sm mr-1" style="width: 240px;" placeholder="原因(可选)" />
+            <button class="btn btn-sm btn-danger" onclick="unionBanAdd()"><i class="fa-solid fa-ban mr-1"></i>封禁</button>
+          </div>
+          {% for l in ledgers %}
+            <div class="yu-hint mt-1">{{ l.code }} · cursor={{ l.cursor }} · {{ l.entries }} 条 · {{ l.fetchedAt }}</div>
+          {% endfor %}
+        </div>
+      </div>{# /封禁卡 #}
+      <div class="card card-outline card-secondary yu-card">
+        <div class="card-header"><h3 class="card-title"><i class="fa-solid fa-list-check mr-1"></i>审计(登录 90 天/治理 30 天)</h3></div>
+        <div class="card-body table-responsive p-0 yu-scroll">
+          <table class="table table-hover table-sm yu-table mb-0">
+            <thead><tr><th>类型</th><th>摘要</th><th>时间</th></tr></thead>
+            <tbody>
+              {% for a in audit %}
+                <tr>
+                  <td><span class="badge badge-{{ {'join_accept':'success','join_issue':'success','join_reject':'danger','conflict':'warning','ban_add':'danger','ban_lift':'info','key_rotate':'warning','bans_pull':'secondary'}[a.type] ?? 'secondary' }}">{{ a.type }}</span></td>
+                  <td class="small">{{ a.detail|json_encode() }}</td>
+                  <td><span class="yu-hint">{{ a.at }}</span></td>
+                </tr>
+              {% else %}
+                <tr><td colspan="3" class="text-center text-muted py-4">暂无记录</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>{# /审计卡 #}
+    </div>{# /yu-col 右2 #}
+  </div>{# /.yu-grid #}
+
+  {% endif %}
+
+  <script>
+    (function () {
+      var notify = globalThis.blessing.notify;
+      var t = globalThis.blessing.t;
+      var countdownTimer = null;
+
+      window.unionCopy = function (inputId) {
+        var input = document.getElementById(inputId);
+        input.select();
+        if (navigator.clipboard) { navigator.clipboard.writeText(input.value); }
+        else { document.execCommand('copy'); }
+        notify.toast.success('已复制');
+      };
+
+      window.unionEnrollIssue = async function () {
+        var btn = document.getElementById('union-issue-btn');
+        btn.disabled = true;
+        var result = await globalThis.blessing.fetch.post(
+          '/admin/plugins/config/yudream-union/enroll-issue',
+          { note: document.getElementById('union-issue-note').value.trim() }
+        );
+        btn.disabled = false;
+        if (result.code === 0) {
+          var token = (result.data && result.data.token) || '';
+          document.getElementById('union-issue-result').hidden = false;
+          document.getElementById('union-issue-token').value = token;
+          var left = 300;
+          if (countdownTimer) { clearInterval(countdownTimer); }
+          countdownTimer = setInterval(function () {
+            left--;
+            var m = document.getElementById('union-issue-countdown');
+            m.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+            if (left <= 0) { clearInterval(countdownTimer); m.textContent = '已过期'; }
+          }, 1000);
+          notify.toast.success('已生成,5 分钟内有效');
+        } else { notify.toast.error(result.message); }
+      };
+
+      window.unionEnrollRegister = async function () {
+        var origin = document.getElementById('union-register-origin').value.trim();
+        var token = document.getElementById('union-register-token').value.trim();
+        if (!origin || !token) { notify.toast.error('请输入对端 origin 与邀请码'); return; }
+        var result = await globalThis.blessing.fetch.post(
+          '/admin/plugins/config/yudream-union/enroll-register',
+          { origin: origin, token: token, note: '' }
+        );
+        if (result.code === 0) {
+          if (result.data && result.data.peerSecret) {
+            notify.toast.success('注册成功');
+            document.getElementById('union-register-token').value = result.data.peerSecret;
+            document.getElementById('union-register-token').select();
+            if (navigator.clipboard) { navigator.clipboard.writeText(result.data.peerSecret); }
+            notify.toast.info('peerSecret 已复制到邀请码输入框(封禁推送用,可忽略)');
+            setTimeout(function () { location.reload(); }, 2500);
+          } else { notify.toast.success(result.message); setTimeout(function () { location.reload(); }, 800); }
+        } else { notify.toast.error(result.message); }
+      };
+
+      window.unionInit = async function () {
+        var code = document.getElementById('union-init-code').value.trim();
+        if (!code) { notify.toast.error('请输入 siteCode'); return; }
+        var btn = document.getElementById('union-init-btn');
+        btn.disabled = true; btn.textContent = '正在生成密钥…';
+        var result = await globalThis.blessing.fetch.post(
+          '/admin/plugins/config/yudream-union/init',
+          { siteCode: code, name: document.getElementById('union-init-name').value.trim() }
+        );
+        if (result.code === 0) { notify.toast.success(result.message); setTimeout(function () { location.reload(); }, 800); }
+        else { notify.toast.error(result.message); btn.disabled = false; btn.textContent = '生成联合密钥(RSA-4096)并初始化'; }
+      };
+
+      window.unionPeerAdd = async function (force) {
+        var origin = document.getElementById('union-peer-origin').value.trim();
+        if (!origin) { notify.toast.error('请输入对端 origin'); return; }
+        var forceChecked = force || document.getElementById('union-peer-force').checked;
+        var result = await globalThis.blessing.fetch.post(
+          '/admin/plugins/config/yudream-union/peer-add', { origin: origin, force: forceChecked });
+        if (result.code === 0) { notify.toast.success(result.message); setTimeout(function () { location.reload(); }, 600); }
+        else if (result.code === 2) { if (confirm(result.message + '\n\n确认已核对指纹并信任?')) { unionPeerAdd(true); } }
+        else { notify.toast.error(result.message); }
+      };
+
+      window.unionPeerRemove = async function (code) {
+        if (!confirm('移除受信站 ' + code + '?该站玩家的联合登录将立即失效。')) { return; }
+        var result = await globalThis.blessing.fetch.post('/admin/plugins/config/yudream-union/peer-remove', { code: code });
+        if (result.code === 0) { notify.toast.success(result.message); setTimeout(function () { location.reload(); }, 600); }
+        else { notify.toast.error(result.message); }
+      };
+
+      window.unionBanAdd = async function () {
+        var name = document.getElementById('union-ban-name').value.trim();
+        if (!name) { notify.toast.error('请输入角色名'); return; }
+        var result = await globalThis.blessing.fetch.post(
+          '/admin/plugins/config/yudream-union/ban-add',
+          { name: name, reason: document.getElementById('union-ban-reason').value.trim() });
+        if (result.code === 0) { notify.toast.success(result.message); setTimeout(function () { location.reload(); }, 600); }
+        else { notify.toast.error(result.message); }
+      };
+
+      window.unionBanLift = async function (name) {
+        if (!confirm('解除对 ' + name + ' 的封禁?(append-only 账本将追加 LIFTED 事件)')) { return; }
+        var result = await globalThis.blessing.fetch.post('/admin/plugins/config/yudream-union/ban-lift', { name: name });
+        if (result.code === 0) { notify.toast.success(result.message); setTimeout(function () { location.reload(); }, 600); }
+        else { notify.toast.error(result.message); }
+      };
+
+      window.unionBansPull = async function () {
+        var btn = document.getElementById('union-bans-pull-btn');
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>同步中…';
+        var result = await globalThis.blessing.fetch.post('/admin/plugins/config/yudream-union/bans-pull', {});
+        if (result.code === 0) { notify.toast.success(result.message); setTimeout(function () { location.reload(); }, 800); }
+        else { notify.toast.error(result.message); btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-sync mr-1"></i>同步受信站账本'; }
+      };
+
+      window.unionKeyAction = async function (action, confirmText, busyText) {
+        if (confirmText && !confirm(confirmText)) { return; }
+        if (busyText) { notify.toast.info(busyText); }
+        var result = await globalThis.blessing.fetch.post('/admin/plugins/config/yudream-union/' + action, {});
+        if (result.code === 0) { notify.toast.success(result.message); setTimeout(function () { location.reload(); }, 800); }
+        else { notify.toast.error(result.message); }
+      };
+    })();
+  </script>
+{% endblock %}
