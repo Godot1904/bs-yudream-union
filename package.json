@@ -1,6 +1,6 @@
 {
   "name": "yudream-union",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "title": "去中心联合认证",
   "description": "SITMC\\YudreamUnion::plugin.description",
   "author": ["SIT MC", "Godot1904"],
